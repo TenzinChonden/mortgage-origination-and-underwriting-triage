@@ -8,7 +8,7 @@
 ## Executive Summary
 Maple Crest Bank of Canada (a simulated retail mortgage lender funding ~8,400 residential mortgages annually at $485,000 CAD average loan size / $4.07B volume) faces a **6.0-business-day** turnaround time for conditional commitments due to manual T4/NOA re-keying, separate credit pulls, and offline Excel debt-service calculations. This bottleneck drives a **35% rework rate** and **14.0% applicant abandonment** (~1,367 lost files annually).
 
-This portfolio case study demonstrates an end-to-end **Business Analysis and Enterprise Architecture** solution automating Straight-Through Processing (STP) for prime salaried borrowers while maintaining strict compliance with **OSFI Guideline B-20**, **CMHC insured caps**, **FINTRAC AML rules**, and **PIPEDA privacy mandates**[cite: 1, 2]:
+This case study demonstrates an end-to-end **Business Analysis and Enterprise Architecture** solution automating Straight-Through Processing (STP) for prime salaried borrowers while maintaining strict compliance with **OSFI Guideline B-20**, **CMHC insured caps**, **FINTRAC AML rules**, and **PIPEDA privacy mandates**[cite: 1, 2]:
 * **Target STP Rate:** 75% of prime salaried intake (45% overall STP) with `< 15 minute` automated conditional commitment letters[cite: 1].
 * **Projected Business Impact:** `$1.50M/yr` net benefit on a `$1.20M` build (`~9.6-month` payback), recovering `+385` funded loans annually[cite: 1].
 
