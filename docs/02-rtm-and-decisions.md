@@ -1,0 +1,32 @@
+# Requirements Traceability Matrix (RTM) & Architecture Decision Log (ADL)
+**Project:** Maple Crest Bank — Retail Mortgage Origination & Underwriting Triage (MVP)  
+**Document ID:** MCB-RL-2026-RTM-01  
+
+---
+
+## 1. Requirements Traceability Matrix (RTM)
+This matrix ensures 100% bidirectional traceability across regulatory/business rules (`BR-01`–`BR-05`), functional and non-functional requirements (`FR-01`–`NFR-03`), Gherkin acceptance scenarios, and target ArchiMate application/technology components.
+
+| Business Rule / Driver | Req ID | Priority | Requirement Summary | Verification / Gherkin Scenario | Target ArchiMate Component(s) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **BR-04** (PIPEDA Consent) / Rework Reduction | **FR-01** | Must Have | Capture timestamped PIPEDA consent and validate mandatory T4/NOA/down-payment attachments prior to submission. | **Scenario 1** (Given PIPEDA consent & valid uploads); UI Gate Integration Test | `Digital Borrower Portal`, `Immutable Audit Log Store` |
+| **BR-02, BR-03** (Credit Score Thresholds) | **FR-02** | Must Have | Retrieve credit score and monthly liability tradelines via Equifax Canada API (with TransUnion backup). | **Scenario 1 & 2** (Bureau debt & score check); API Failover Test | `Origination Orchestration Engine`, `External API Gateway` |
+| **OSFI B-20** (Income Verification) | **FR-03** | Must Have | Extract gross income from CRA NOA and T4 slips via OCR and verify within $\pm 2.0\%$ of declared income. | **Scenario 1** (Verified T4/NOA income); OCR Variance Boundary Test ($\pm 2.0\%$) | `OCR Extraction Service`, `Origination Orchestration Engine` |
+| **BR-01, BR-02, BR-03** (MQR Stress Test, Track A Insured vs. Track B Conventional) | **FR-04** | Must Have | Classify Track A ($LTV > 80\%$, $\le \$1.5\text{M}$) vs. Track B ($LTV \le 80\%$), capitalize CMHC premiums, and calculate MQR-stressed GDS/TDS. | **Scenario 1** (Track B Pass: 33.7% GDS / 40.1% TDS); **Scenario 2** (Track A Breach: 44.5% TDS) | `Externalized B-20/CMHC Rules Engine` |
+| **BR-04** (FINTRAC / AML & Source of Funds) | **FR-05** | Must Have | Screen against Canadian sanctions, FINTRAC PEP lists, and 90-day bank statement provenance for down payments $\ge \$10,000$. | **Scenario 3** (FINTRAC PEP match or $\$25\text{k}$ deposit lacking 90-day provenance) | `External API Gateway`, `Externalized B-20/CMHC Rules Engine` |
+| **BR-05** (No Automated Declines) / STP Target | **FR-06** | Must Have | Issue automated Conditional Commitment Letters ($< 15\text{ min}$) for clean prime files; route breaches/AML flags to Workbench with reason codes ($\le 2\text{ days}$). | **Scenario 1** (STP Commitment); **Scenario 2** (`ERR-CMHC-TDS-44`); **Scenario 3** (`HOLD-AML-SOF`) | `Origination Orchestration Engine`, `Underwriter Workbench`, `Legacy Core LOS` |
+| **Performance SLA** | **NFR-01** | Must Have | Complete automated triage execution (bureau pull + rules evaluation) within $\le 15\text{ seconds}$ (95th percentile). | JMeter / Locust Load Test (p95 latency $\le 15\text{s}$ under peak intake) | `Origination Orchestration Engine` (Parallel Scatter-Gather) |
+| **PIPEDA / OSFI Security & Audit** | **NFR-02** | Must Have | Store all borrower PII and tax documents on Canadian cloud infrastructure with AES-256 encryption and a 7-year audit trail. | Cloud Residency Audit (`ca-central-1`), Encryption & Retention Verification | `Canadian Cloud Infrastructure`, `Encrypted Document Vault`, `Immutable Audit Log Store` |
+| **Policy Agility** | **NFR-03** | Should Have | Allow Risk Policy admins to update OSFI MQR benchmark floors and GDS/TDS caps via configuration tables without code changes. | Admin Config Update Test (Change MQR floor from 5.25% to 5.75% without redeploy) | `Externalized B-20/CMHC Rules Engine` (Decision Tables) |
+
+---
+
+## 2. Architecture Decision Log (ADL)
+This log documents the key architectural trade-offs made to achieve the 45% overall STP target and 9.6-month payback period while mitigating legacy integration and regulatory risks.
+
+| ADR ID | Decision Title | Context & Architectural Question | Chosen Option | Rejected Alternative | Rationale & Trade-Offs |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **ADR-01** | **Strangler Fig API Orchestration Layer** | How do we automate pre-commitment triage without getting bogged down modifying Maple Crest Bank's Legacy Core LOS? | Introduce an API-first **Origination Orchestration Engine** between the Borrower Portal and Legacy LOS, using a single synchronous write-back API for approved STP commitments. | Building intake, OCR, and rules directly inside the Legacy Core LOS. | **Pros:** Isolates rapid MVP delivery from legacy release cycles; mitigates Risk #1 via a single narrow API contract.<br>**Cons:** Requires distributed transaction handling if the synchronous LOS write-back fails. |
+| **ADR-02** | **Externalized Rules Engine (DMN / Config Tables)** | How do we satisfy `NFR-03` so Risk Policy can adjust OSFI MQR floors and CMHC caps without developer deployments? | Decouple underwriting policy into a dedicated **Externalized B-20/CMHC Rules Engine** backed by versioned configuration tables. | Hardcoding GDS/TDS formulas and MQR floors inside the orchestration microservice. | **Pros:** Enables zero-downtime threshold updates and clear auditability for OSFI exams.<br>**Cons:** Adds an internal network hop (< 50ms) during triage evaluation. |
+| **ADR-03** | **Parallel Scatter-Gather Execution** | Sequential calls to Equifax, OCR extraction, and FINTRAC screening risk breaching the `NFR-01` ($\le 15\text{s}$ p95) SLA. | Execute Equifax credit pull, T4/NOA OCR extraction, and FINTRAC/Sanctions checks **concurrently** immediately after the PIPEDA consent gate. | Sequential step-by-step API calls in a synchronous chain. | **Pros:** Total external I/O latency equals the slowest single API rather than the sum of all three.<br>**Cons:** Slightly higher complexity in aggregating partial failures into standardized exception codes. |
+| **ADR-04** | **Non-Destructive Exception Routing (`BR-05`)** | How should policy breaches (e.g., 44.5% TDS) or missing 90-day bank history be handled by automation? | Never auto-decline; route any non-STP file to the **Underwriter Workbench** or **Compliance Queue** with deterministic reason codes (`ERR-CMHC-TDS-44`, `HOLD-AML-SOF`). | Automated instant rejection for files exceeding GDS/TDS caps. | **Pros:** Preserves prime borrower conversion, protects against OCR/bureau false positives, and reinforces underwriter trust (Risk #2). |
