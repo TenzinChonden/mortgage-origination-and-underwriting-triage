@@ -1,0 +1,4 @@
+scenario,mqr_floor,stp_count,stp_rate,workbench_count,compliance_count,avg_gds,avg_tds
+Base Case (MQR 5.25% Floor),0.0525,4115,0.4899,3837,448,0.3108,0.3497
+Moderate Shock (+100 bps / 6.25%),0.0625,4101,0.4882,3851,448,0.3118,0.3506
+Severe Rate Shock (+200 bps / 7.25%),0.0725,3863,0.4599,4089,448,0.3249,0.3637
