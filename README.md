@@ -1,6 +1,6 @@
 # Maple Crest Bank: Target State Mortgage Origination & Underwriting Triage
 
-I built this end-to-end **Business Analysis (BA)**, **Enterprise Architecture (EA)**, and **Decision Analytics** case study to demonstrate how a mid-sized Canadian retail bank can modernize residential mortgage origination—reducing conditional pre-commitment turnaround from **6.0 business days to under 15 minutes** for Straight-Through Processing (STP) applications while maintaining strict compliance with **OSFI Guideline B-20**, **CMHC insurance rules**, **FINTRAC AML/ATF**, and **PIPEDA**.
+End-to-end **Business Analysis (BA)**, **Enterprise Architecture (EA)**, and **Decision Analytics** case study built to demonstrate how a mid-sized Canadian retail bank can modernize residential mortgage origination—reducing conditional pre-commitment turnaround from **6.0 business days to under 15 minutes** for Straight-Through Processing (STP) applications while maintaining strict compliance with **OSFI Guideline B-20**, **CMHC insurance rules**, **FINTRAC AML/ATF**, and **PIPEDA**.
 
 > **Methodology & AI Co-Pilot Disclosure:**
 >
@@ -24,13 +24,13 @@ To solve this without risking a core banking replacement, I designed a **Strangl
 
 ### To-Be Triage Process Map (BPMN 2.0)
 
-![To-Be Mortgage Triage Process Map](architecture/exports/To-Be-bpmn.png)
+![To-Be Mortgage Triage Process Map](architecture/exports/To-Be_bpmn.png)
 
 In my re-engineered workflow, I replaced sequential handoffs with a **Parallel Scatter-Gather** verification pattern (`ADR-03`) across Equifax credit pulls (`FR-02`), OCR tax extraction (`FR-03`), and FINTRAC/Sanctions screening (`FR-05`). Applications then pass through deterministic routing (`OK-STP-PRIME`, `ERR-CMHC-TDS-44`, `HOLD-AML-SOF`) into a synchronous LOS write-back boundary with built-in error fallback.
 
 ### Target Layered Architecture (ArchiMate 3.x)
 
-![Target Layered Architecture View](architecture/exports/03-target-layered-architecture.png)
+![Target Layered Architecture View](architecture/exports/02-Target-Layered-Architecture-View.png)
 
 Aligned to **TOGAF ADM** and **ArchiMate 3.x**, I mapped executive drivers and goals down through business processes, decoupled microservices (`Origination Orchestration Engine`, `Externalized B-20 / CMHC Rules Engine`), and a single narrow `LOS Synchronous Write-Back API`. All cloud-native services are hosted on **Canadian sovereign cloud infrastructure (`ca-central-1`, `NFR-02`)** with AES-256 encryption and 7-year immutable audit logging.
 
@@ -75,7 +75,7 @@ mortgage-underwriting-ba-case-study/
 └── README.md
 ```
 
-## 5. How to Reproduce My Simulation & Tests
+## 5. Steps to Reproduce
 
 1. **Activate the virtual environment & install dependencies:**
    ```powershell
